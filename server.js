@@ -22,7 +22,7 @@ app.get('/test-notion', async (req, res) => {
   if (!token) return res.json({ error: 'No token provided' });
   
   try {
-    const result = await queryNotion('116078c2-4941-4ea3-ade0-47d98d094528', token, null);
+    const result = await queryNotion('737f57cda9be466997574d1aa1bc7554', token, null);
     res.json({ 
       success: true, 
       records: result ? result.length : 0,
