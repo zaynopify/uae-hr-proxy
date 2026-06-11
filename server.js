@@ -16,7 +16,22 @@ app.use(express.json());
 app.get('/health', (req, res) => {
   res.json({ status: 'UAE HR Proxy is running' });
 });
-
+// Test Notion connection
+app.get('/test-notion', async (req, res) => {
+  const token = req.query.token;
+  if (!token) return res.json({ error: 'No token provided' });
+  
+  try {
+    const result = await queryNotion('116078c2-4941-4ea3-ade0-47d98d094528', token, null);
+    res.json({ 
+      success: true, 
+      records: result ? result.length : 0,
+      sample: result?.[0]?.properties ? Object.keys(result[0].properties) : []
+    });
+  } catch(e) {
+    res.json({ error: e.message });
+  }
+});
 // Main chat endpoint
 app.post('/chat', async (req, res) => {
   const { message, notionToken, empDbId, leaveDbId, compDbId, payDbId, history } = req.body;
