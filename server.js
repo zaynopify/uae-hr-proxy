@@ -141,6 +141,8 @@ app.post('/chat', async (req, res) => {
       role: 'user',
       content: notionContext ? `${message}\n\n[LIVE NOTION WORKSPACE DATA]:${notionContext}` : message
     });
+console.log('Notion context length:', notionContext.length);
+console.log('Notion context preview:', notionContext.substring(0, 200));
 
     // Call Groq API
     const groqKey = process.env.GROQ_API_KEY;
