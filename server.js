@@ -89,7 +89,7 @@ app.post('/chat', async (req, res) => {
 
       // Compliance
       if (msg.includes('compliance') || msg.includes('expir') || msg.includes('visa') || msg.includes('critical')) {
-        const dbId = compDbId || '73f1c3bc-b977-4ad9-9fc2-461255fdde48';
+        const dbId = empDbId || '737f57cda9be466997574d1aa1bc7554';
         const data = await queryNotion(dbId, notionToken, {
           or: [
             { property: 'Status', select: { equals: 'Critical' } },
