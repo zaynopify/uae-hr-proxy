@@ -48,10 +48,10 @@ app.post('/chat', async (req, res) => {
       // Employee data
       if (msg.includes('employee') || msg.includes('staff') || msg.includes('how many') || msg.includes('who')) {
         const dbId = empDbId || '116078c2-4941-4ea3-ade0-47d98d094528';
-        const data = await queryNotion(dbId, notionToken, {
-          property: 'Status',
-          status: { equals: 'Active' }
-        });
+      const data = await queryNotion(dbId, notionToken, {
+  property: 'Status',
+  select: { equals: 'Active' }
+});
         if (data && data.length > 0) {
           notionContext += `\n\n👥 LIVE EMPLOYEE DATA (${data.length} active employees):\n`;
           data.slice(0, 20).forEach(r => {
