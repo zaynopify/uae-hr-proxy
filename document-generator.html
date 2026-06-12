@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UAE HR Document Generator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3350;
+      --accent: #4f8ef7;
+      --accent2: #6ee7b7;
+      --text: #e8eaf6;
+      --muted: #7c85b0;
+      --danger: #f87171;
+      --radius: 10px;
+      --font: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .header-icon {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .header-title { font-size: 17px; font-weight: 700; color: var(--text); }
+    .header-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .badge {
+      margin-left: auto;
+      font-size: 10px; font-weight: 600; letter-spacing: .5px;
+      background: rgba(79,142,247,.15); color: var(--accent);
+      border: 1px solid rgba(79,142,247,.3);
+      padding: 3px 10px; border-radius: 20px; text-transform: uppercase;
+    }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 860px;
+      margin: 32px auto;
+      padding: 0 20px 60px;
+    }
+
+    /* ── Doc type selector ── */
+    .section-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .doc-types {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .doc-type-btn {
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all .18s;
+      text-align: left;
+    }
+    .doc-type-btn:hover { border-color: var(--accent); background: var(--surface2); }
+    .doc-type-btn.active {
+      border-color: var(--accent);
+      background: rgba(79,142,247,.08);
+    }
+    .doc-type-btn .dt-icon { font-size: 22px; margin-bottom: 6px; }
+    .doc-type-btn .dt-name { font-size: 13px; font-weight: 600; color: var(--text); }
+    .doc-type-btn .dt-desc { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+    /* ── Form ── */
+    .form-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 26px;
+      margin-bottom: 20px;
+    }
+    .form-card-title {
+      font-size: 14px; font-weight: 700;
+      color: var(--text); margin-bottom: 20px;
+      padding-bottom: 14px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-grid.full { grid-template-columns: 1fr; }
+    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.span2 { grid-column: span 2; }
+    @media (max-width: 600px) { .form-group.span2 { grid-column: span 1; } }
+
+    label { font-size: 12px; font-weight: 600; color: var(--muted); }
+    input, select, textarea {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 9px 12px;
+      font-size: 13px; color: var(--text);
+      font-family: var(--font);
+      transition: border-color .15s;
+      width: 100%;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none; border-color: var(--accent);
+    }
+    input::placeholder, textarea::placeholder { color: var(--muted); }
+    select option { background: var(--surface2); color: var(--text); }
+    textarea { resize: vertical; min-height: 80px; }
+
+    /* ── Generate button ── */
+    .btn-generate {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--accent), #3a7bd5);
+      color: #fff; font-size: 14px; font-weight: 700;
+      border: none; border-radius: var(--radius);
+      cursor: pointer; transition: opacity .2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin-bottom: 14px;
+    }
+    .btn-generate:hover { opacity: .9; }
+    .btn-generate:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Status / loading ── */
+    .status-bar {
+      display: none;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      font-size: 13px; color: var(--muted);
+      align-items: center; gap: 10px;
+      margin-bottom: 16px;
+    }
+    .status-bar.show { display: flex; }
+    .spinner {
+      width: 18px; height: 18px; flex-shrink: 0;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Preview ── */
+    .preview-card {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .preview-card.show { display: block; }
+    .preview-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .preview-header-left { font-size: 13px; font-weight: 700; color: var(--text); }
+    .preview-header-right { display: flex; gap: 8px; }
+
+    .btn-action {
+      padding: 7px 16px;
+      font-size: 12px; font-weight: 600;
+      border-radius: 6px; border: none; cursor: pointer;
+      transition: opacity .15s; display: flex; align-items: center; gap: 6px;
+    }
+    .btn-action:hover { opacity: .85; }
+    .btn-pdf {
+      background: linear-gradient(135deg, var(--accent2), #10b981);
+      color: #0a1a12;
+    }
+    .btn-copy {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-regen {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .doc-preview {
+      padding: 30px 32px;
+      font-size: 13.5px; line-height: 1.85;
+      color: var(--text);
+      white-space: pre-wrap;
+      font-family: 'Segoe UI', sans-serif;
+      max-height: 520px;
+      overflow-y: auto;
+    }
+
+    /* ── Error ── */
+    .error-bar {
+      display: none;
+      background: rgba(248,113,113,.08);
+      border: 1px solid rgba(248,113,113,.3);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 13px; color: var(--danger);
+      margin-bottom: 14px;
+      gap: 8px; align-items: center;
+    }
+    .error-bar.show { display: flex; }
+
+    /* ── UAE Compliance tag ── */
+    .compliance-tag {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; color: var(--accent2);
+      background: rgba(110,231,183,.08);
+      border: 1px solid rgba(110,231,183,.2);
+      border-radius: 20px; padding: 3px 10px;
+      margin-bottom: 24px;
+    }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">📄</div>
+  <div>
+    <div class="header-title">UAE HR Document Generator</div>
+    <div class="header-sub">AI-powered · Federal Decree-Law No. 33 of 2021</div>
+  </div>
+  <div class="badge">AI Powered</div>
+</div>
+
+<div class="container">
+
+  <div class="compliance-tag">
+    ✅ UAE Labour Law Compliant · MOHRE Standards
+  </div>
+
+  <!-- Document Type Selection -->
+  <div class="section-label">Select Document Type</div>
+  <div class="doc-types">
+    <button class="doc-type-btn active" data-type="warning" onclick="selectDocType(this, 'warning')">
+      <div class="dt-icon">⚠️</div>
+      <div class="dt-name">Warning Letter</div>
+      <div class="dt-desc">First / second / final warning</div>
+    </button>
+    <button class="doc-type-btn" data-type="termination" onclick="selectDocType(this, 'termination')">
+      <div class="dt-icon">🔴</div>
+      <div class="dt-name">Termination Letter</div>
+      <div class="dt-desc">Employment termination notice</div>
+    </button>
+    <button class="doc-type-btn" data-type="salary_certificate" onclick="selectDocType(this, 'salary_certificate')">
+      <div class="dt-icon">📋</div>
+      <div class="dt-name">Salary Certificate</div>
+      <div class="dt-desc">Bank / visa / official use</div>
+    </button>
+    <button class="doc-type-btn" data-type="salary_slip" onclick="selectDocType(this, 'salary_slip')">
+      <div class="dt-icon">💰</div>
+      <div class="dt-name">Salary Slip</div>
+      <div class="dt-desc">Monthly payslip breakdown</div>
+    </button>
+  </div>
+
+  <!-- Dynamic Form -->
+  <div id="form-area"></div>
+
+  <!-- Status -->
+  <div class="status-bar" id="status-bar">
+    <div class="spinner"></div>
+    <span id="status-text">Generating your document...</span>
+  </div>
+
+  <!-- Error -->
+  <div class="error-bar" id="error-bar">
+    <span>⚠️</span>
+    <span id="error-text">Something went wrong. Please try again.</span>
+  </div>
+
+  <!-- Preview -->
+  <div class="preview-card" id="preview-card">
+    <div class="preview-header">
+      <div class="preview-header-left">📄 Generated Document</div>
+      <div class="preview-header-right">
+        <button class="btn-action btn-regen" onclick="regenerate()">↺ Regenerate</button>
+        <button class="btn-action btn-copy" onclick="copyDoc()">📋 Copy</button>
+        <button class="btn-action btn-pdf" onclick="downloadPDF()">⬇ Download PDF</button>
+      </div>
+    </div>
+    <div class="doc-preview" id="doc-preview"></div>
+  </div>
+
+</div>
+
+<!-- jsPDF for PDF generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+  const PROXY_URL = 'https://uae-hr-proxy.onrender.com/chat';
+  let currentDocType = 'warning';
+  let generatedText = '';
+
+  // ── Form definitions ──────────────────────────────────────────────
+  const forms = {
+    warning: {
+      title: '⚠️ Warning Letter Details',
+      fields: [
+        { id: 'company_name',   label: 'Company Name',        placeholder: 'e.g. Al Fajr Trading LLC',   col: 1 },
+        { id: 'employee_name',  label: 'Employee Full Name',   placeholder: 'e.g. Mohammed Al Rashidi',   col: 1 },
+        { id: 'job_title',      label: 'Job Title',            placeholder: 'e.g. Sales Executive',       col: 1 },
+        { id: 'employee_id',    label: 'Employee ID',          placeholder: 'e.g. EMP-0042',              col: 1 },
+        { id: 'warning_level',  label: 'Warning Level',        type: 'select',
+          options: ['First Warning','Second Warning','Final Warning'], col: 1 },
+        { id: 'issue_date',     label: 'Date of Letter',       type: 'date',                              col: 1 },
+        { id: 'incident_date',  label: 'Date of Incident',     type: 'date',                              col: 1 },
+        { id: 'hr_name',        label: 'HR / Manager Name',    placeholder: 'e.g. Fatima Al Zaabi',       col: 1 },
+        { id: 'violation',      label: 'Nature of Violation',  placeholder: 'e.g. Repeated lateness, absence without approval', type: 'textarea', span2: true },
+        { id: 'extra',          label: 'Additional Notes (optional)', placeholder: 'Any specific details or expectations...', type: 'textarea', span2: true },
+      ]
+    },
+    termination: {
+      title: '🔴 Termination Letter Details',
+      fields: [
+        { id: 'company_name',    label: 'Company Name',         placeholder: 'e.g. Gulf Star HR Solutions',   col: 1 },
+        { id: 'employee_name',   label: 'Employee Full Name',    placeholder: 'e.g. Priya Nair',              col: 1 },
+        { id: 'job_title',       label: 'Job Title',             placeholder: 'e.g. HR Coordinator',          col: 1 },
+        { id: 'employee_id',     label: 'Employee ID',           placeholder: 'e.g. EMP-0019',                col: 1 },
+        { id: 'termination_type',label: 'Termination Type',      type: 'select',
+          options: ['Termination with Notice','Immediate Termination (Gross Misconduct)','Redundancy / Business Closure','End of Contract'], col: 1 },
+        { id: 'issue_date',      label: 'Letter Date',           type: 'date',                                col: 1 },
+        { id: 'last_working_day',label: 'Last Working Day',      type: 'date',                                col: 1 },
+        { id: 'notice_period',   label: 'Notice Period',         placeholder: 'e.g. 30 days',                 col: 1 },
+        { id: 'reason',          label: 'Reason for Termination',placeholder: 'e.g. Persistent performance issues despite written warnings', type: 'textarea', span2: true },
+        { id: 'eos_note',        label: 'End of Service / Settlement Note (optional)', placeholder: 'e.g. Gratuity and final settlement will be processed within 14 days', type: 'textarea', span2: true },
+      ]
+    },
+    salary_certificate: {
+      title: '📋 Salary Certificate Details',
+      fields: [
+        { id: 'company_name',   label: 'Company Name',         placeholder: 'e.g. Nakheel Properties LLC',  col: 1 },
+        { id: 'employee_name',  label: 'Employee Full Name',   placeholder: 'e.g. Khalifa Al Mansoori',     col: 1 },
+        { id: 'job_title',      label: 'Job Title',            placeholder: 'e.g. Project Manager',         col: 1 },
+        { id: 'department',     label: 'Department',           placeholder: 'e.g. Engineering',             col: 1 },
+        { id: 'join_date',      label: 'Date of Joining',      type: 'date',                                col: 1 },
+        { id: 'issue_date',     label: 'Date of Issue',        type: 'date',                                col: 1 },
+        { id: 'basic_salary',   label: 'Basic Salary (AED)',   placeholder: 'e.g. 8000',                   col: 1 },
+        { id: 'housing',        label: 'Housing Allowance (AED)', placeholder: 'e.g. 3000',                col: 1 },
+        { id: 'transport',      label: 'Transport Allowance (AED)', placeholder: 'e.g. 1000',              col: 1 },
+        { id: 'other_allowance',label: 'Other Allowances (AED)',    placeholder: 'e.g. 500',               col: 1 },
+        { id: 'purpose',        label: 'Purpose of Certificate',    placeholder: 'e.g. Bank loan application, visa renewal, tenancy contract', type: 'textarea', span2: true },
+        { id: 'hr_name',        label: 'HR / Signatory Name',   placeholder: 'e.g. Sara Al Hammadi',        col: 1 },
+        { id: 'hr_title',       label: 'Signatory Title',       placeholder: 'e.g. HR Manager',             col: 1 },
+      ]
+    },
+    salary_slip: {
+      title: '💰 Salary Slip Details',
+      fields: [
+        { id: 'company_name',   label: 'Company Name',          placeholder: 'e.g. Emirates Tech FZ LLC',  col: 1 },
+        { id: 'employee_name',  label: 'Employee Full Name',    placeholder: 'e.g. Mathew George',          col: 1 },
+        { id: 'employee_id',    label: 'Employee ID',           placeholder: 'e.g. EMP-0005',               col: 1 },
+        { id: 'job_title',      label: 'Job Title',             placeholder: 'e.g. IT Support Engineer',    col: 1 },
+        { id: 'pay_month',      label: 'Pay Month',             placeholder: 'e.g. June 2026',              col: 1 },
+        { id: 'bank_account',   label: 'Bank Account (last 4)', placeholder: 'e.g. 4471',                   col: 1 },
+        { id: 'basic_salary',   label: 'Basic Salary (AED)',    placeholder: 'e.g. 7000',                  col: 1 },
+        { id: 'housing',        label: 'Housing Allowance (AED)', placeholder: 'e.g. 2500',                col: 1 },
+        { id: 'transport',      label: 'Transport Allowance (AED)', placeholder: 'e.g. 800',               col: 1 },
+        { id: 'other_allowance',label: 'Other Allowances (AED)',    placeholder: 'e.g. 500',               col: 1 },
+        { id: 'deductions',     label: 'Total Deductions (AED)',    placeholder: 'e.g. 0 or 200',          col: 1 },
+        { id: 'deduction_note', label: 'Deduction Note (optional)', placeholder: 'e.g. Absence deduction', col: 1 },
+        { id: 'days_worked',    label: 'Days Worked',               placeholder: 'e.g. 30',                col: 1 },
+        { id: 'wps_ref',        label: 'WPS Reference (optional)',  placeholder: 'e.g. WPS-0624-005',      col: 1 },
+      ]
+    }
+  };
+
+  // ── Render form ───────────────────────────────────────────────────
+  function renderForm(type) {
+    const def = forms[type];
+    let html = `<div class="form-card">
+      <div class="form-card-title">${def.title}</div>
+      <div class="form-grid">`;
+
+    def.fields.forEach(f => {
+      const spanClass = f.span2 ? ' span2' : '';
+      html += `<div class="form-group${spanClass}">
+        <label for="${f.id}">${f.label}</label>`;
+
+      if (f.type === 'select') {
+        html += `<select id="${f.id}">`;
+        f.options.forEach(o => html += `<option value="${o}">${o}</option>`);
+        html += `</select>`;
+      } else if (f.type === 'textarea') {
+        html += `<textarea id="${f.id}" rows="3" placeholder="${f.placeholder || ''}"></textarea>`;
+      } else if (f.type === 'date') {
+        html += `<input type="date" id="${f.id}" />`;
+      } else {
+        html += `<input type="text" id="${f.id}" placeholder="${f.placeholder || ''}" />`;
+      }
+
+      html += `</div>`;
+    });
+
+    html += `</div></div>
+    <button class="btn-generate" onclick="generateDocument()">
+      <span>✨</span> Generate Document
+    </button>`;
+
+    document.getElementById('form-area').innerHTML = html;
+    // set today as default for date fields
+    const today = new Date().toISOString().split('T')[0];
+    document.querySelectorAll('input[type="date"]').forEach(el => {
+      if (!el.value) el.value = today;
+    });
+  }
+
+  // ── Doc type selector ─────────────────────────────────────────────
+  function selectDocType(btn, type) {
+    document.querySelectorAll('.doc-type-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentDocType = type;
+    hidePreview();
+    hideError();
+    renderForm(type);
+  }
+
+  // ── Collect field values ──────────────────────────────────────────
+  function collectFields() {
+    const def = forms[currentDocType];
+    const data = {};
+    def.fields.forEach(f => {
+      const el = document.getElementById(f.id);
+      if (el) data[f.label] = el.value.trim();
+    });
+    return data;
+  }
+
+  // ── Build AI prompt ───────────────────────────────────────────────
+  function buildPrompt(type, data) {
+    const base = `You are a UAE HR expert. Generate a professional, formal ${getDocLabel(type)} compliant with UAE Federal Decree-Law No. 33 of 2021 (UAE Labour Law).
+
+Use the following details:
+${Object.entries(data).map(([k,v]) => `- ${k}: ${v || 'N/A'}`).join('\n')}
+
+Requirements:
+- Use formal business English
+- Include proper salutations and closing
+- Reference UAE Labour Law where appropriate
+- Format with proper spacing and structure (use --- for section dividers)
+- Include [SIGNATURE] placeholder at the end
+- Do NOT include any explanation or commentary outside the document itself
+- Start directly with the document
+
+Generate the complete document now:`;
+    return base;
+  }
+
+  function getDocLabel(type) {
+    const labels = {
+      warning: 'Employee Warning Letter',
+      termination: 'Employee Termination Letter',
+      salary_certificate: 'Salary Certificate',
+      salary_slip: 'Salary Slip / Pay Slip'
+    };
+    return labels[type] || 'HR Document';
+  }
+
+  // ── Generate ──────────────────────────────────────────────────────
+  async function generateDocument() {
+    hidePreview();
+    hideError();
+    showStatus('Generating your document with AI...');
+
+    const data = collectFields();
+    const prompt = buildPrompt(currentDocType, data);
+
+    try {
+      const res = await fetch(PROXY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: prompt })
+      });
+
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+      const json = await res.json();
+
+      // Handle both {reply: "..."} and {message: "..."} response shapes
+      const text = json.reply || json.message || json.content || json.text || '';
+      if (!text) throw new Error('Empty response from server.');
+
+      generatedText = text;
+      hideStatus();
+      showPreview(text);
+
+    } catch (err) {
+      hideStatus();
+      showError(err.message || 'Failed to generate document. Check your connection and try again.');
+    }
+  }
+
+  function regenerate() { generateDocument(); }
+
+  // ── PDF Download ──────────────────────────────────────────────────
+  function downloadPDF() {
+    if (!generatedText) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+    const margin = 20;
+    const pageW = doc.internal.pageSize.getWidth();
+    const usableW = pageW - margin * 2;
+    const pageH = doc.internal.pageSize.getHeight();
+    const lineH = 7;
+    let y = margin;
+
+    // Header bar
+    doc.setFillColor(15, 17, 23);
+    doc.rect(0, 0, pageW, 18, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('UAE HR DOCUMENT GENERATOR', margin, 12);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Federal Decree-Law No. 33 of 2021', pageW - margin, 12, { align: 'right' });
+
+    y = 30;
+    doc.setTextColor(20, 20, 20);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+
+    const lines = doc.splitTextToSize(generatedText, usableW);
+
+    lines.forEach(line => {
+      if (y + lineH > pageH - margin) {
+        doc.addPage();
+        y = margin;
+      }
+      const isBold = line.startsWith('RE:') || line.startsWith('TO:') || line.startsWith('FROM:') || line.startsWith('SUBJECT:') || line.toUpperCase() === line && line.trim().length > 3;
+      doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+      doc.text(line, margin, y);
+      y += lineH;
+    });
+
+    // Footer
+    doc.setFontSize(8);
+    doc.setTextColor(150);
+    doc.text(`Generated by UAE HR OS · ${new Date().toLocaleDateString('en-AE')}`, margin, pageH - 10);
+
+    const filename = `${getDocLabel(currentDocType).replace(/ /g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`;
+    doc.save(filename);
+  }
+
+  // ── Copy ─────────────────────────────────────────────────────────
+  function copyDoc() {
+    if (!generatedText) return;
+    navigator.clipboard.writeText(generatedText).then(() => {
+      const btn = document.querySelector('.btn-copy');
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => btn.innerHTML = '📋 Copy', 1800);
+    });
+  }
+
+  // ── UI helpers ────────────────────────────────────────────────────
+  function showStatus(msg) {
+    document.getElementById('status-text').textContent = msg;
+    document.getElementById('status-bar').classList.add('show');
+    document.querySelector('.btn-generate').disabled = true;
+  }
+  function hideStatus() {
+    document.getElementById('status-bar').classList.remove('show');
+    document.querySelector('.btn-generate').disabled = false;
+  }
+  function showError(msg) {
+    document.getElementById('error-text').textContent = msg;
+    document.getElementById('error-bar').classList.add('show');
+  }
+  function hideError() {
+    document.getElementById('error-bar').classList.remove('show');
+  }
+  function showPreview(text) {
+    document.getElementById('doc-preview').textContent = text;
+    document.getElementById('preview-card').classList.add('show');
+    document.getElementById('preview-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function hidePreview() {
+    document.getElementById('preview-card').classList.remove('show');
+    generatedText = '';
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────
+  renderForm('warning');
+</script>
+</body>
+</html>
