@@ -10,7 +10,7 @@ app.use(express.json());
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'UAE HR OS Proxy is running', version: '2.0', databases: 10 });
+  res.json({ status: 'UAE HR OS Proxy is running', version: '2.1', databases: 12 });
 });
 
 // ─── Database IDs ─────────────────────────────────────────────────
@@ -24,7 +24,9 @@ const DB = {
   offboarding:    '06572eaa-0d1f-438d-8585-2074ef9db228',
   recruitment:    '116078c2-4941-4ea3-ade0-47d98d094529',
   performance:    '116078c2-4941-4ea3-ade0-47d98d094530',
-  knowledge:      'ae7e1df9-b673-4238-8848-7d17a30f8511'
+  knowledge:      'ae7e1df9-b673-4238-8848-7d17a30f8511',
+  policies:       '375baa4e-5fb7-808e-993d-fbfe58239400',
+  templates:      '375baa4e-5fb7-80e8-90ba-fa64ef79b511'
 };
 
 // ─── Main Chat Endpoint ───────────────────────────────────────────
@@ -222,6 +224,41 @@ EMPLOYEE: ${name}
           });
         }
       }
+
+      // ── 11. HR POLICY CENTER ──────────────────────────────────
+      if (msg.includes('policy') || msg.includes('policies') || msg.includes('remote work') ||
+          msg.includes('flexible work') || msg.includes('health and safety') ||
+          msg.includes('code of conduct') || msg.includes('data security') ||
+          msg.includes('it policy') || msg.includes('compensation policy') ||
+          msg.includes('emiratisation policy') || msg.includes('emiratization policy') ||
+          msg.includes('acknowledg')) {
+
+        const data = await queryNotion(DB.policies, token, null);
+        if (data && data.length > 0) {
+          notionContext += `\n\n📜 HR POLICY CENTER (${data.length} policies):\n`;
+          data.forEach(r => {
+            const p = r.properties;
+            const name = getText(p['Policy Name'] || p[Object.keys(p)[0]]);
+            notionContext += `- ${name}: Category: ${getText(p['Category'])} | Status: ${getText(p['Status'])} | Version: ${getText(p['Version'])} | Effective: ${getText(p['Effective Date'])} | Last Reviewed: ${getText(p['Last Reviewed Date'])} | Acknowledgment Required: ${getText(p['Acknowledgment Required'])}\n`;
+          });
+        }
+      }
+
+      // ── 12. HR TEMPLATE CENTER ─────────────────────────────────
+      if (msg.includes('template') || msg.includes('show cause') || msg.includes('noc') ||
+          msg.includes('experience letter') || msg.includes('offer letter') ||
+          msg.includes('probation extension') || msg.includes('final warning')) {
+
+        const data = await queryNotion(DB.templates, token, null);
+        if (data && data.length > 0) {
+          notionContext += `\n\n📝 HR TEMPLATE CENTER (${data.length} templates):\n`;
+          data.forEach(r => {
+            const p = r.properties;
+            const name = getText(p['Template Name'] || p[Object.keys(p)[0]]);
+            notionContext += `- ${name}: Type: ${getText(p['Type'])} | Language: ${getText(p['Language'])} | MOHRE Compliant: ${getText(p['MOHRE Complaint'])} | Last Updated: ${getText(p['Last Updated'])}\n`;
+          });
+        }
+      }
     }
 
     console.log('Notion context length:', notionContext.length);
@@ -357,6 +394,8 @@ DATABASES YOU CAN ACCESS:
 8. Recruitment Tracker — candidates and hiring pipeline
 9. Performance Management — KPI scores and ratings
 10. HR Knowledge Base — UAE labour law articles and SOPs
+11. HR Policy Center — company policies (category, status, version, review dates)
+12. HR Template Center — available HR document templates (warning, termination, NOC, offer letter, etc.)
 
 Always give specific, actionable answers. If asked about an employee, give their exact details from the data.`;
 
