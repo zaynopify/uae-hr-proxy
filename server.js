@@ -16,7 +16,7 @@ app.get('/health', (req, res) => {
 // ─── Database IDs ─────────────────────────────────────────────────
 const DB = {
   employees:      '737f57cda9be466997574d1aa1bc7554',
-  leave:          '0c37701c-2c94-41fd-a5cd-616759676287',
+  leave:          'f6d686e7-2c7c-433c-977f-880af2d9cd3c',
   leaveBalance:   '374baa4e-5fb7-80c8-a75f-000b264bf244',
   compliance:     '73f1c3bcb9774ad99fc2461255fdde48',
   payroll:        '9e05c8c3-a1d1-400e-975c-07e36e6980b6',
@@ -361,9 +361,6 @@ app.get('/daily-digest', async (req, res) => {
     const leaveResult = await queryNotionDebug(DB.leave, leaveFilter);
     const pendingLeave = leaveResult.results;
 
-    // TEMP DIAGNOSTIC: also try the alternate "database container" ID for Leave Requests
-    const leaveResultAlt = await queryNotionDebug('f6d686e7-2c7c-433c-977f-880af2d9cd3c', leaveFilter);
-
     // Build expiry rows
     let expiryRows = '';
     expiring.forEach(r => {
@@ -443,9 +440,7 @@ app.get('/daily-digest', async (req, res) => {
       thresholdDays,
       _debug: {
         complianceQueryError: complianceResult.error,
-        leaveQueryError: leaveResult.error,
-        leaveAltIdError: leaveResultAlt.error,
-        leaveAltIdResultCount: leaveResultAlt.results.length
+        leaveQueryError: leaveResult.error
       },
       message: emailSent
         ? 'Digest sent successfully'
