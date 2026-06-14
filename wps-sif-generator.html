@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UAE WPS SIF Generator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #22263a;
+      --border: #2e3350;
+      --accent: #4f8ef7;
+      --accent2: #6ee7b7;
+      --gold: #c9a84c;
+      --gold2: #e0c878;
+      --text: #e8eaf6;
+      --muted: #7c85b0;
+      --danger: #f87171;
+      --radius: 10px;
+      --font: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .header-icon {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--gold), var(--gold2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+    .header-title { font-size: 17px; font-weight: 700; color: var(--text); }
+    .header-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .badge {
+      margin-left: auto;
+      font-size: 10px; font-weight: 600; letter-spacing: .5px;
+      background: rgba(201,168,76,.12); color: var(--gold2);
+      border: 1px solid rgba(201,168,76,.3);
+      padding: 3px 10px; border-radius: 20px; text-transform: uppercase;
+    }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 980px;
+      margin: 32px auto;
+      padding: 0 20px 60px;
+    }
+
+    .compliance-tag {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; color: var(--accent2);
+      background: rgba(110,231,183,.08);
+      border: 1px solid rgba(110,231,183,.2);
+      border-radius: 20px; padding: 3px 10px;
+      margin-bottom: 18px;
+    }
+
+    .disclaimer {
+      background: rgba(248,113,113,.06);
+      border: 1px solid rgba(248,113,113,.2);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      font-size: 12px; color: #f3b9b9;
+      margin-bottom: 24px; line-height: 1.6;
+    }
+    .disclaimer b { color: #fca5a5; }
+
+    .section-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; color: var(--muted);
+      margin: 24px 0 10px;
+    }
+
+    /* ── Cards ── */
+    .form-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 8px;
+    }
+    .form-card-title {
+      font-size: 14px; font-weight: 700;
+      color: var(--text); margin-bottom: 18px;
+      padding-bottom: 12px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 8px;
+    }
+
+    .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    @media (max-width: 760px) { .form-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 500px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 12px; font-weight: 600; color: var(--muted); }
+    input, select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 9px 12px;
+      font-size: 13px; color: var(--text);
+      font-family: var(--font);
+      width: 100%;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+    input::placeholder { color: var(--muted); }
+    select option { background: var(--surface2); color: var(--text); }
+
+    /* ── Tabs for entry mode ── */
+    .entry-tabs {
+      display: flex; gap: 8px; margin-bottom: 16px;
+    }
+    .entry-tab {
+      flex: 1; text-align: center;
+      padding: 10px; border-radius: 8px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      cursor: pointer; font-size: 13px; font-weight: 600; color: var(--muted);
+      transition: all .15s;
+    }
+    .entry-tab.active {
+      border-color: var(--accent);
+      color: var(--text);
+      background: rgba(79,142,247,.08);
+    }
+
+    /* ── CSV upload box ── */
+    .csv-box {
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 30px 20px;
+      text-align: center;
+      background: var(--surface2);
+      margin-bottom: 12px;
+    }
+    .csv-box input[type="file"] { display: none; }
+    .csv-label {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff; padding: 9px 20px;
+      border-radius: 7px; font-size: 13px; font-weight: 600;
+      cursor: pointer; margin-top: 10px;
+    }
+    .csv-hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .btn-template {
+      background: none; border: 1px solid var(--border);
+      color: var(--accent2); font-size: 12px; font-weight: 600;
+      padding: 7px 14px; border-radius: 7px; cursor: pointer;
+      margin-top: 14px;
+    }
+    .btn-template:hover { border-color: var(--accent2); }
+
+    /* ── Employee table ── */
+    .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 1000px; }
+    th {
+      background: var(--surface2); color: var(--muted);
+      font-weight: 700; text-align: left; padding: 10px 8px;
+      border-bottom: 1px solid var(--border); white-space: nowrap;
+      font-size: 11px; text-transform: uppercase; letter-spacing: .5px;
+    }
+    td {
+      padding: 6px 8px; border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    td input {
+      padding: 6px 8px; font-size: 12.5px; min-width: 90px;
+    }
+    .net-cell { color: var(--accent2); font-weight: 700; white-space: nowrap; }
+    .remove-btn {
+      background: rgba(248,113,113,.1); color: var(--danger);
+      border: 1px solid rgba(248,113,113,.25);
+      border-radius: 6px; width: 28px; height: 28px;
+      cursor: pointer; font-size: 14px; line-height: 1;
+    }
+    .remove-btn:hover { background: rgba(248,113,113,.2); }
+
+    .table-footer {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px; background: var(--surface2);
+      border-top: 1px solid var(--border);
+      flex-wrap: wrap; gap: 10px;
+    }
+    .btn-add {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--accent); padding: 8px 16px; border-radius: 7px;
+      font-size: 12.5px; font-weight: 600; cursor: pointer;
+    }
+    .btn-add:hover { border-color: var(--accent); }
+
+    .totals-summary {
+      display: flex; gap: 22px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap;
+    }
+    .totals-summary b { color: var(--text); font-size: 14px; }
+
+    /* ── Generate buttons ── */
+    .generate-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      margin-top: 22px;
+    }
+    @media (max-width: 600px) { .generate-row { grid-template-columns: 1fr; } }
+
+    .btn-generate {
+      padding: 14px;
+      font-size: 14px; font-weight: 700;
+      border: none; border-radius: var(--radius);
+      cursor: pointer; transition: opacity .2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-generate:hover { opacity: .9; }
+    .btn-sif {
+      background: linear-gradient(135deg, var(--gold), #b8923a);
+      color: #2a2204;
+    }
+    .btn-excel {
+      background: linear-gradient(135deg, var(--accent2), #10b981);
+      color: #0a1a12;
+    }
+
+    .status-bar {
+      display: none;
+      background: rgba(110,231,183,.08);
+      border: 1px solid rgba(110,231,183,.25);
+      border-radius: var(--radius);
+      padding: 12px 16px; margin-top: 14px;
+      font-size: 13px; color: var(--accent2);
+      align-items: center; gap: 8px;
+    }
+    .status-bar.show { display: flex; }
+
+    .error-bar {
+      display: none;
+      background: rgba(248,113,113,.08);
+      border: 1px solid rgba(248,113,113,.3);
+      border-radius: var(--radius);
+      padding: 12px 16px; margin-top: 14px;
+      font-size: 13px; color: var(--danger);
+      align-items: center; gap: 8px;
+    }
+    .error-bar.show { display: flex; }
+
+    ::-webkit-scrollbar { height: 6px; width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">🏦</div>
+  <div>
+    <div class="header-title">UAE WPS SIF Generator</div>
+    <div class="header-sub">Wage Protection System · Salary Information File</div>
+  </div>
+  <div class="badge">WPS Ready</div>
+</div>
+
+<div class="container">
+
+  <div class="compliance-tag">
+    ✅ MOHRE WPS Format · Central Bank SIF Structure (v2.1)
+  </div>
+
+  <div class="disclaimer">
+    <b>Important:</b> This tool generates a standard-format SIF file based on the UAE Central Bank Wage Protection System specification. Bank/exchange house routing codes (Agent IDs) and minor field requirements can vary slightly by financial institution. Before submitting to your bank's WPS portal, please verify the file against your bank's latest SIF template, or run a test upload first.
+  </div>
+
+  <!-- Employer Setup -->
+  <div class="form-card">
+    <div class="form-card-title">🏢 Establishment / Employer Details</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Company Name</label>
+        <input type="text" id="companyName" placeholder="e.g. Al Fajr Trading LLC" />
+      </div>
+      <div class="form-group">
+        <label>Employer Establishment ID (EID)</label>
+        <input type="text" id="employerEID" placeholder="e.g. 123456789" />
+      </div>
+      <div class="form-group">
+        <label>Employer Bank Routing Code (Agent ID)</label>
+        <input type="text" id="employerAgentId" placeholder="e.g. 044" />
+      </div>
+      <div class="form-group">
+        <label>Salary Month</label>
+        <select id="salaryMonth">
+          <option value="01">January</option><option value="02">February</option>
+          <option value="03">March</option><option value="04">April</option>
+          <option value="05">May</option><option value="06" selected>June</option>
+          <option value="07">July</option><option value="08">August</option>
+          <option value="09">September</option><option value="10">October</option>
+          <option value="11">November</option><option value="12">December</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Salary Year</label>
+        <input type="number" id="salaryYear" value="2026" placeholder="e.g. 2026" />
+      </div>
+      <div class="form-group">
+        <label>Currency</label>
+        <input type="text" id="currency" value="AED" disabled />
+      </div>
+    </div>
+  </div>
+
+  <!-- Entry mode -->
+  <div class="section-label">Employee Payroll Data</div>
+  <div class="entry-tabs">
+    <div class="entry-tab active" id="tab-manual" onclick="switchTab('manual')">✍️ Manual Entry</div>
+    <div class="entry-tab" id="tab-csv" onclick="switchTab('csv')">📁 Upload CSV</div>
+  </div>
+
+  <!-- CSV upload -->
+  <div id="csv-area" style="display:none;">
+    <div class="csv-box">
+      <div style="font-size:28px;">📄</div>
+      <div style="font-size:13px; color: var(--muted); margin-top:8px;">Upload a CSV file with your employee payroll data</div>
+      <label class="csv-label" for="csvFile">Choose CSV File</label>
+      <input type="file" id="csvFile" accept=".csv" onchange="handleCSV(event)" />
+      <div class="csv-hint">Columns: Employee Name, Employee ID, IBAN, Routing Code, Basic, Housing, Transport, Other Allowance, Deductions, Days Worked</div>
+      <br/>
+      <button class="btn-template" onclick="downloadTemplate()">⬇ Download CSV Template</button>
+    </div>
+  </div>
+
+  <!-- Employee Table -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Employee Name</th>
+          <th>Employee ID</th>
+          <th>IBAN</th>
+          <th>Routing Code</th>
+          <th>Basic (AED)</th>
+          <th>Housing (AED)</th>
+          <th>Transport (AED)</th>
+          <th>Other (AED)</th>
+          <th>Deductions (AED)</th>
+          <th>Days Worked</th>
+          <th>Net Salary (AED)</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="emp-table-body"></tbody>
+    </table>
+    <div class="table-footer">
+      <button class="btn-add" onclick="addRow()">+ Add Employee</button>
+      <div class="totals-summary">
+        <div>Employees: <b id="totalEmployees">0</b></div>
+        <div>Total Net Salary: <b id="totalNet">AED 0.00</b></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Generate buttons -->
+  <div class="generate-row">
+    <button class="btn-generate btn-sif" onclick="downloadSIF()">🏦 Download SIF File</button>
+    <button class="btn-generate btn-excel" onclick="downloadExcel()">📊 Download Excel Summary</button>
+  </div>
+
+  <div class="status-bar" id="status-bar">✅ <span id="status-text"></span></div>
+  <div class="error-bar" id="error-bar">⚠️ <span id="error-text"></span></div>
+
+</div>
+
+<!-- SheetJS for Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- PapaParse for CSV import -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+<script>
+  let rowCounter = 0;
+
+  const fieldKeys = ['name','empId','iban','routing','basic','housing','transport','other','deductions','days'];
+  const fieldPlaceholders = {
+    name: 'e.g. Mohammed Al Rashidi',
+    empId: 'e.g. 784199012345678',
+    iban: 'e.g. AE070330000012345678901',
+    routing: 'e.g. 044',
+    basic: '0',
+    housing: '0',
+    transport: '0',
+    other: '0',
+    deductions: '0',
+    days: '30'
+  };
+
+  function addRow(data = {}) {
+    rowCounter++;
+    const id = rowCounter;
+    const tbody = document.getElementById('emp-table-body');
+    const tr = document.createElement('tr');
+    tr.id = `row-${id}`;
+
+    let cells = '';
+    fieldKeys.forEach(key => {
+      const isNumber = ['basic','housing','transport','other','deductions','days'].includes(key);
+      const val = data[key] !== undefined ? data[key] : '';
+      cells += `<td><input type="${isNumber ? 'number' : 'text'}" id="${key}-${id}"
+                  value="${val}" placeholder="${fieldPlaceholders[key]}"
+                  ${isNumber ? `oninput="recalc()" min="0" step="0.01"` : ''} /></td>`;
+    });
+    cells += `<td class="net-cell" id="net-${id}">AED 0.00</td>`;
+    cells += `<td><button class="remove-btn" onclick="removeRow(${id})">✕</button></td>`;
+
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+    recalc();
+  }
+
+  function removeRow(id) {
+    const row = document.getElementById(`row-${id}`);
+    if (row) row.remove();
+    recalc();
+  }
+
+  function recalc() {
+    let totalNet = 0;
+    let count = 0;
+    document.querySelectorAll('#emp-table-body tr').forEach(tr => {
+      const id = tr.id.replace('row-', '');
+      const basic = parseFloat(document.getElementById(`basic-${id}`)?.value) || 0;
+      const housing = parseFloat(document.getElementById(`housing-${id}`)?.value) || 0;
+      const transport = parseFloat(document.getElementById(`transport-${id}`)?.value) || 0;
+      const other = parseFloat(document.getElementById(`other-${id}`)?.value) || 0;
+      const deductions = parseFloat(document.getElementById(`deductions-${id}`)?.value) || 0;
+      const net = (basic + housing + transport + other) - deductions;
+      const netCell = document.getElementById(`net-${id}`);
+      if (netCell) netCell.textContent = `AED ${net.toFixed(2)}`;
+      totalNet += net;
+      count++;
+    });
+    document.getElementById('totalEmployees').textContent = count;
+    document.getElementById('totalNet').textContent = `AED ${totalNet.toFixed(2)}`;
+  }
+
+  // ── Tabs ─────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.getElementById('tab-manual').classList.toggle('active', tab === 'manual');
+    document.getElementById('tab-csv').classList.toggle('active', tab === 'csv');
+    document.getElementById('csv-area').style.display = tab === 'csv' ? 'block' : 'none';
+  }
+
+  // ── CSV Template ─────────────────────────────────────────────────
+  function downloadTemplate() {
+    const headers = 'Employee Name,Employee ID,IBAN,Routing Code,Basic,Housing,Transport,Other Allowance,Deductions,Days Worked';
+    const example = 'Mohammed Al Rashidi,784199012345678,AE070330000012345678901,044,8000,3000,1000,500,0,30';
+    const csv = headers + '\n' + example;
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'wps_payroll_template.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── CSV Import ───────────────────────────────────────────────────
+  function handleCSV(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: function(results) {
+        try {
+          // Clear existing rows
+          document.getElementById('emp-table-body').innerHTML = '';
+          rowCounter = 0;
+
+          results.data.forEach(row => {
+            addRow({
+              name: row['Employee Name'] || '',
+              empId: row['Employee ID'] || '',
+              iban: row['IBAN'] || '',
+              routing: row['Routing Code'] || '',
+              basic: row['Basic'] || 0,
+              housing: row['Housing'] || 0,
+              transport: row['Transport'] || 0,
+              other: row['Other Allowance'] || 0,
+              deductions: row['Deductions'] || 0,
+              days: row['Days Worked'] || 30
+            });
+          });
+
+          showStatus(`Imported ${results.data.length} employee record(s) from CSV.`);
+          switchTab('manual');
+        } catch (err) {
+          showError('Could not read CSV file. Please use the provided template.');
+        }
+      },
+      error: function() {
+        showError('Failed to parse CSV file. Please check the format and try again.');
+      }
+    });
+  }
+
+  // ── Validation ───────────────────────────────────────────────────
+  function validate() {
+    const eid = document.getElementById('employerEID').value.trim();
+    const agentId = document.getElementById('employerAgentId').value.trim();
+    const rows = document.querySelectorAll('#emp-table-body tr');
+
+    if (!eid) { showError('Please enter the Employer Establishment ID (EID).'); return false; }
+    if (!agentId) { showError('Please enter the Employer Bank Routing Code (Agent ID).'); return false; }
+    if (rows.length === 0) { showError('Please add at least one employee.'); return false; }
+
+    let valid = true;
+    rows.forEach(tr => {
+      const id = tr.id.replace('row-', '');
+      const name = document.getElementById(`name-${id}`).value.trim();
+      const empId = document.getElementById(`empId-${id}`).value.trim();
+      const iban = document.getElementById(`iban-${id}`).value.trim();
+      if (!name || !empId || !iban) valid = false;
+    });
+    if (!valid) { showError('Each employee needs at least a Name, Employee ID, and IBAN.'); return false; }
+
+    return true;
+  }
+
+  // ── Build employee data array ───────────────────────────────────
+  function getEmployees() {
+    const employees = [];
+    document.querySelectorAll('#emp-table-body tr').forEach(tr => {
+      const id = tr.id.replace('row-', '');
+      const basic = parseFloat(document.getElementById(`basic-${id}`).value) || 0;
+      const housing = parseFloat(document.getElementById(`housing-${id}`).value) || 0;
+      const transport = parseFloat(document.getElementById(`transport-${id}`).value) || 0;
+      const other = parseFloat(document.getElementById(`other-${id}`).value) || 0;
+      const deductions = parseFloat(document.getElementById(`deductions-${id}`).value) || 0;
+      const days = parseFloat(document.getElementById(`days-${id}`).value) || 30;
+      const fixed = basic + housing + transport + other;
+      const net = fixed - deductions;
+
+      employees.push({
+        name: document.getElementById(`name-${id}`).value.trim(),
+        empId: document.getElementById(`empId-${id}`).value.trim(),
+        iban: document.getElementById(`iban-${id}`).value.trim().toUpperCase(),
+        routing: document.getElementById(`routing-${id}`).value.trim(),
+        basic, housing, transport, other, deductions, days, fixed, net
+      });
+    });
+    return employees;
+  }
+
+  // ── SIF Generation ───────────────────────────────────────────────
+  function downloadSIF() {
+    hideStatus(); hideError();
+    if (!validate()) return;
+
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2,'0');
+    const mm = String(now.getMonth()+1).padStart(2,'0');
+    const yyyy = now.getFullYear();
+    const fileDate = `${dd}${mm}${yyyy}`;
+    const hh = String(now.getHours()).padStart(2,'0');
+    const mi = String(now.getMinutes()).padStart(2,'0');
+    const ss = String(now.getSeconds()).padStart(2,'0');
+    const fileTime = `${hh}${mi}${ss}`;
+
+    const eid = document.getElementById('employerEID').value.trim();
+    const agentId = document.getElementById('employerAgentId').value.trim();
+    const salaryMonth = document.getElementById('salaryMonth').value;
+    const salaryYear = document.getElementById('salaryYear').value;
+
+    const employees = getEmployees();
+    let totalNet = 0;
+
+    const lines = [];
+    // EDR — Employer Detail Record
+    lines.push(['EDR', eid, agentId, fileDate, fileTime, eid, '2.1', salaryYear, salaryMonth].join(','));
+
+    // SCR — Salary Compensation Records
+    employees.forEach(e => {
+      totalNet += e.net;
+      lines.push([
+        'SCR', eid, e.empId, e.name, e.iban, e.routing || agentId,
+        'M', salaryMonth, salaryYear,
+        '30', e.days, '0',
+        e.fixed.toFixed(2), '0.00', e.deductions.toFixed(2), e.net.toFixed(2)
+      ].join(','));
+    });
+
+    // EOF — Footer / Trailer Record
+    lines.push(['EOF', employees.length, totalNet.toFixed(2)].join(','));
+
+    const content = lines.join('\r\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const company = (document.getElementById('companyName').value.trim() || 'WPS').replace(/[^a-zA-Z0-9]/g, '_');
+    a.href = url;
+    a.download = `${company}_SIF_${salaryYear}${salaryMonth}.SIF`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    showStatus(`SIF file generated for ${employees.length} employee(s) — Total Net: AED ${totalNet.toFixed(2)}`);
+  }
+
+  // ── Excel Generation ─────────────────────────────────────────────
+  function downloadExcel() {
+    hideStatus(); hideError();
+    if (!validate()) return;
+
+    const employees = getEmployees();
+    const companyName = document.getElementById('companyName').value.trim() || 'Company';
+    const eid = document.getElementById('employerEID').value.trim();
+    const salaryMonth = document.getElementById('salaryMonth').value;
+    const salaryYear = document.getElementById('salaryYear').value;
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+    const wsData = [
+      [`${companyName} — WPS Payroll Summary`],
+      [`Establishment ID: ${eid}`, '', `Salary Period: ${monthNames[parseInt(salaryMonth)-1]} ${salaryYear}`],
+      [],
+      ['Employee Name','Employee ID','IBAN','Routing Code','Basic (AED)','Housing (AED)','Transport (AED)','Other Allowance (AED)','Total Fixed (AED)','Deductions (AED)','Days Worked','Net Salary (AED)']
+    ];
+
+    let totalNet = 0, totalFixed = 0, totalDed = 0;
+    employees.forEach(e => {
+      wsData.push([e.name, e.empId, e.iban, e.routing, e.basic, e.housing, e.transport, e.other, e.fixed, e.deductions, e.days, e.net]);
+      totalNet += e.net; totalFixed += e.fixed; totalDed += e.deductions;
+    });
+
+    wsData.push([]);
+    wsData.push(['TOTAL', '', '', '', '', '', '', '', totalFixed.toFixed(2), totalDed.toFixed(2), '', totalNet.toFixed(2)]);
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [
+      {wch:24},{wch:18},{wch:26},{wch:14},{wch:12},{wch:12},{wch:12},{wch:14},{wch:14},{wch:14},{wch:12},{wch:14}
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, 'WPS Payroll');
+
+    const fname = `${companyName.replace(/[^a-zA-Z0-9]/g,'_')}_Payroll_Summary_${salaryYear}${salaryMonth}.xlsx`;
+    XLSX.writeFile(wb, fname);
+
+    showStatus(`Excel summary generated for ${employees.length} employee(s).`);
+  }
+
+  // ── UI helpers ───────────────────────────────────────────────────
+  function showStatus(msg) {
+    document.getElementById('status-text').textContent = msg;
+    document.getElementById('status-bar').classList.add('show');
+  }
+  function hideStatus() { document.getElementById('status-bar').classList.remove('show'); }
+  function showError(msg) {
+    document.getElementById('error-text').textContent = msg;
+    document.getElementById('error-bar').classList.add('show');
+  }
+  function hideError() { document.getElementById('error-bar').classList.remove('show'); }
+
+  // ── Init ─────────────────────────────────────────────────────────
+  addRow();
+  addRow();
+</script>
+</body>
+</html>
