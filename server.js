@@ -313,6 +313,122 @@ app.get('/test-notion', async (req, res) => {
   }
 });
 
+// ─── Daily Digest: Expiry Alerts + Pending Leave Approvals ────────
+// Designed to be triggered once a day by a free external cron service
+// (e.g. cron-job.org) hitting GET /daily-digest
+// Requires env vars: NOTION_TOKEN, RESEND_API_KEY, HR_EMAIL
+// Optional env var: EXPIRY_THRESHOLD_DAYS (default 30)
+app.get('/daily-digest', async (req, res) => {
+  try {
+    const token = process.env.NOTION_TOKEN;
+    const resendKey = process.env.RESEND_API_KEY;
+    const hrEmail = process.env.HR_EMAIL;
+    const thresholdDays = parseInt(process.env.EXPIRY_THRESHOLD_DAYS) || 30;
+
+    if (!token) return res.status(400).json({ error: 'NOTION_TOKEN not configured in environment variables' });
+
+    // 1. Compliance documents expiring within the threshold (includes already-expired)
+    const complianceFilter = {
+      property: 'Days Remaining',
+      formula: { number: { less_than_or_equal_to: thresholdDays } }
+    };
+    const expiring = await queryNotion(DB.compliance, token, complianceFilter) || [];
+
+    // 2. Leave requests awaiting approval
+    const leaveFilter = {
+      property: 'Approval Status',
+      select: { equals: 'Pending' }
+    };
+    const pendingLeave = await queryNotion(DB.leave, token, leaveFilter) || [];
+
+    // Build expiry rows
+    let expiryRows = '';
+    expiring.forEach(r => {
+      const p = r.properties;
+      const name = getText(p['Document Name'] || p[Object.keys(p)[0]]);
+      const type = getText(p['Document Type']) || getText(p['Compliance Area']);
+      const expiry = getText(p['Expiry Date']);
+      const days = getText(p['Days Remaining']);
+      const daysNum = parseFloat(days);
+      const urgency = daysNum < 0 ? '🔴 EXPIRED' : (daysNum <= 7 ? '🟠 Urgent' : '🟡 Upcoming');
+      expiryRows += `<tr><td style="padding:8px;border-bottom:1px solid #2e3350;">${name}</td><td style="padding:8px;border-bottom:1px solid #2e3350;">${type}</td><td style="padding:8px;border-bottom:1px solid #2e3350;">${expiry}</td><td style="padding:8px;border-bottom:1px solid #2e3350;">${days} days</td><td style="padding:8px;border-bottom:1px solid #2e3350;">${urgency}</td></tr>`;
+    });
+
+    // Build pending leave rows
+    let leaveRows = '';
+    pendingLeave.forEach(r => {
+      const p = r.properties;
+      const name = getText(p['Leave Request'] || p[Object.keys(p)[0]]);
+      const type = getText(p['Leave Type']);
+      const start = getText(p['Start Date']);
+      const end = getText(p['End Date']);
+      const totalDays = getText(p['Total Days']);
+      leaveRows += `<tr><td style="padding:8px;border-bottom:1px solid #2e3350;">${name}</td><td style="padding:8px;border-bottom:1px solid #2e3350;">${type}</td><td style="padding:8px;border-bottom:1px solid #2e3350;">${start} → ${end}</td><td style="padding:8px;border-bottom:1px solid #2e3350;">${totalDays} days</td></tr>`;
+    });
+
+    // Build email HTML
+    const html = `
+    <div style="font-family: 'Segoe UI', sans-serif; max-width: 640px; margin: 0 auto; background:#0f1117; color:#e8eaf6; border-radius:10px; overflow:hidden;">
+      <div style="background:#1a1d27; padding:18px 24px; border-bottom:1px solid #2e3350;">
+        <h2 style="margin:0; font-size:16px;">📋 UAE HR OS — Daily Digest</h2>
+        <div style="font-size:12px; color:#7c85b0; margin-top:4px;">${new Date().toLocaleDateString('en-AE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+      </div>
+      <div style="padding:20px 24px;">
+        <h3 style="font-size:14px; color:#f87171; margin-top:0;">⚠️ Documents Expiring Within ${thresholdDays} Days (${expiring.length})</h3>
+        ${expiring.length > 0 ? `
+        <table style="width:100%; font-size:13px; border-collapse:collapse; margin-bottom:24px;">
+          <tr style="color:#7c85b0; text-align:left;"><th style="padding:8px;">Document</th><th style="padding:8px;">Type</th><th style="padding:8px;">Expiry</th><th style="padding:8px;">Days Left</th><th style="padding:8px;">Status</th></tr>
+          ${expiryRows}
+        </table>` : `<p style="font-size:13px; color:#6ee7b7;">✅ No documents expiring soon.</p>`}
+
+        <h3 style="font-size:14px; color:#4f8ef7;">🏖️ Leave Requests Awaiting Approval (${pendingLeave.length})</h3>
+        ${pendingLeave.length > 0 ? `
+        <table style="width:100%; font-size:13px; border-collapse:collapse;">
+          <tr style="color:#7c85b0; text-align:left;"><th style="padding:8px;">Request</th><th style="padding:8px;">Type</th><th style="padding:8px;">Dates</th><th style="padding:8px;">Days</th></tr>
+          ${leaveRows}
+        </table>` : `<p style="font-size:13px; color:#6ee7b7;">✅ No pending leave requests.</p>`}
+      </div>
+      <div style="background:#1a1d27; padding:12px 24px; font-size:11px; color:#7c85b0; border-top:1px solid #2e3350;">
+        Generated automatically by your UAE HR OS · Federal Decree-Law No. 33 of 2021
+      </div>
+    </div>`;
+
+    // Send via Resend (https://resend.com)
+    let emailSent = false;
+    let emailError = null;
+    if (resendKey && hrEmail) {
+      const emailRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: 'UAE HR OS <onboarding@resend.dev>',
+          to: hrEmail,
+          subject: `📋 HR Daily Digest — ${expiring.length} expiring, ${pendingLeave.length} pending leave`,
+          html
+        })
+      });
+      emailSent = emailRes.ok;
+      if (!emailRes.ok) emailError = await emailRes.text().catch(() => 'Unknown error');
+    }
+
+    res.json({
+      success: true,
+      emailSent,
+      emailError,
+      expiringDocuments: expiring.length,
+      pendingLeaveRequests: pendingLeave.length,
+      thresholdDays,
+      message: emailSent
+        ? 'Digest sent successfully'
+        : (resendKey && hrEmail ? 'Email send failed — see emailError' : 'Email not sent — set RESEND_API_KEY and HR_EMAIL environment variables on Render')
+    });
+
+  } catch (e) {
+    console.error('Daily digest error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Query Notion
 async function queryNotion(dbId, token, filter) {
   try {
