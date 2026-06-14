@@ -361,6 +361,9 @@ app.get('/daily-digest', async (req, res) => {
     const leaveResult = await queryNotionDebug(DB.leave, leaveFilter);
     const pendingLeave = leaveResult.results;
 
+    // TEMP DIAGNOSTIC: also try the alternate "database container" ID for Leave Requests
+    const leaveResultAlt = await queryNotionDebug('f6d686e7-2c7c-433c-977f-880af2d9cd3c', leaveFilter);
+
     // Build expiry rows
     let expiryRows = '';
     expiring.forEach(r => {
@@ -440,7 +443,9 @@ app.get('/daily-digest', async (req, res) => {
       thresholdDays,
       _debug: {
         complianceQueryError: complianceResult.error,
-        leaveQueryError: leaveResult.error
+        leaveQueryError: leaveResult.error,
+        leaveAltIdError: leaveResultAlt.error,
+        leaveAltIdResultCount: leaveResultAlt.results.length
       },
       message: emailSent
         ? 'Digest sent successfully'
