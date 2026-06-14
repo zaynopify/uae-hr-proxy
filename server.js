@@ -327,19 +327,39 @@ app.get('/daily-digest', async (req, res) => {
 
     if (!token) return res.status(400).json({ error: 'NOTION_TOKEN not configured in environment variables' });
 
+    // Helper that surfaces Notion API errors instead of swallowing them
+    async function queryNotionDebug(dbId, filter) {
+      try {
+        const body = { page_size: 50 };
+        if (filter) body.filter = filter;
+        const r = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const json = await r.json().catch(() => ({}));
+        if (!r.ok) return { results: [], error: `HTTP ${r.status}: ${json.message || json.code || 'unknown error'}` };
+        return { results: json.results || [], error: null };
+      } catch (e) {
+        return { results: [], error: e.message };
+      }
+    }
+
     // 1. Compliance documents expiring within the threshold (includes already-expired)
     const complianceFilter = {
       property: 'Days Remaining',
       formula: { number: { less_than_or_equal_to: thresholdDays } }
     };
-    const expiring = await queryNotion(DB.compliance, token, complianceFilter) || [];
+    const complianceResult = await queryNotionDebug(DB.compliance, complianceFilter);
+    const expiring = complianceResult.results;
 
     // 2. Leave requests awaiting approval
     const leaveFilter = {
       property: 'Approval Status',
       select: { equals: 'Pending' }
     };
-    const pendingLeave = await queryNotion(DB.leave, token, leaveFilter) || [];
+    const leaveResult = await queryNotionDebug(DB.leave, leaveFilter);
+    const pendingLeave = leaveResult.results;
 
     // Build expiry rows
     let expiryRows = '';
@@ -418,6 +438,10 @@ app.get('/daily-digest', async (req, res) => {
       expiringDocuments: expiring.length,
       pendingLeaveRequests: pendingLeave.length,
       thresholdDays,
+      _debug: {
+        complianceQueryError: complianceResult.error,
+        leaveQueryError: leaveResult.error
+      },
       message: emailSent
         ? 'Digest sent successfully'
         : (resendKey && hrEmail ? 'Email send failed — see emailError' : 'Email not sent — set RESEND_API_KEY and HR_EMAIL environment variables on Render')
